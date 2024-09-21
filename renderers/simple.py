@@ -52,6 +52,34 @@ def interpolate_path(path, num_points=100):
     return interpolated_path
 
 
+def convert_camera_params(camera_position, focal_point, up_vector):
+    # Compute the direction vector
+    direction = np.array(focal_point) - np.array(camera_position)
+    
+    # Normalize the direction vector
+    direction_norm = np.linalg.norm(direction)
+    if direction_norm == 0:
+        return 0, 0, 0  # Avoid division by zero
+
+    direction = direction / direction_norm
+    
+    # Calculate azimuth
+    D_x, D_y, D_z = direction
+    azimuth = np.arctan2(D_y, D_x)
+
+    # Calculate elevation
+    elevation = np.arctan2(D_z, np.sqrt(D_x**2 + D_y**2))
+
+    # Calculate roll - For a standard view, you may set this to 0
+    # Roll can be calculated based on the up vector if needed
+    roll = 0  # Assuming no roll for simplicity
+    
+    # Convert radians to degrees
+    azimuth = np.degrees(azimuth)
+    elevation = np.degrees(elevation)
+    
+    return roll, azimuth, elevation
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Load an npz file and display points.")
@@ -60,35 +88,27 @@ if __name__ == "__main__":
 
     paths = load_npz_file(args.file)
 
-    print(paths[1])
-
     camera_position_container = [None]
 
     flattened_points = [point for sublist in paths for point in sublist]
     plot_points(flattened_points, camera_position_container)
 
-    print(camera_position_container)
-
     position, focal_point, view_up = camera_position_container[0]
+    camera_position = camera_position_container[0]
+    position, focal_point, up_vector = camera_position
+    roll, azimuth, elevation = convert_camera_params(position, focal_point, up_vector)
     
     interpolated_paths = [] 
     for path in paths:
         interpolated_paths.append(interpolate_path(path, num_points=10000))
 
-    # Calculate elevation and azimuth from camera position and focal point
-    dx = focal_point[0] - position[0]
-    dy = focal_point[1] - position[1]
-    dz = focal_point[2] - position[2]
-
-    elevation = np.degrees(np.arctan2(dz, np.sqrt(dx**2 + dy**2)))  # Elevation angle
-    azimuth = np.degrees(np.arctan2(dy, dx))  # Azimuth angle
-
+    # Set the view using the calculated angles
+    
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
+    ax.view_init(elev=elevation, azim=azimuth)
 
-    # Set colors for paths (yellow and blue)
-    colors = [cm.winter(i / len(paths)) for i in range(len(paths))]  # Blue to yellow colormap
-    # Set colors for the paths
+
     line_color = 'blue'
     fuzzy_color = 'black'
     electric_blue = '#00FFFF'  # Bright electric blue
@@ -96,36 +116,23 @@ if __name__ == "__main__":
     # Plot each path
     for path in interpolated_paths:
         # Create a fuzzy line effect by plotting several black lines
-        random_offsets = np.random.normal(0, 0.0001, size=path[:, 2].shape)  # Change the stddev to adjust fuzziness
-        ax.plot(path[:, 0], path[:, 1], path[:, 2] + random_offsets, color=fuzzy_color, alpha=0.7, linewidth=4)  # Thicker black line
+        random_offsets = np.random.normal(0, 0.00005, size=path[:, 2].shape)  # Change the stddev to adjust fuzziness
+        ax.plot(path[:, 0], path[:, 1], path[:, 2] + random_offsets, color=fuzzy_color, alpha=0.95, linewidth=4)  # Thicker black line
         
         # Plot the main blue line in the middle
         ax.plot(path[:, 0], path[:, 1], path[:, 2], color=line_color, alpha=1.0)
 
+    for path in interpolated_paths:
         # Plot the skinny electric blue line on top
         ax.plot(path[:, 0], path[:, 1], path[:, 2], color=electric_blue, alpha=1.0, linewidth=0.5)  # Skinny electric blue line
 
 
-    all_paths = np.concatenate(interpolated_paths)
-    x_limits = [all_paths[:, 0].min(), all_paths[:, 0].max()]
-    y_limits = [all_paths[:, 1].min(), all_paths[:, 1].max()]
-    z_limits = [all_paths[:, 2].min(), all_paths[:, 2].max()]
-
-    ax.set_xlim(x_limits)
-    ax.set_ylim(y_limits)
-    ax.set_zlim(z_limits)
-    # Set labels and title
-    ax.set_xlabel('X Axis')
-    ax.set_ylabel('Y Axis')
-    ax.set_zlabel('Z Axis')
-    ax.set_title('Interpolated Particle Paths in Bubble Chamber')
     ax.set_axis_off()  # Hides the axes and ticks
 
     ax.grid(False)  # Hides the grid
-    ax.view_init(elev=elevation, azim=azimuth)
 
     ax.set_facecolor((1.0, 0.8, 0.0))
 
     # Save the figure
     plt.savefig('interpolated_paths.png', bbox_inches='tight')
-    plt.show()
+    
