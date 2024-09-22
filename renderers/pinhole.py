@@ -7,6 +7,8 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from bubblelib import PinholeCamera
+
 DEBUG = False
 SENSOR_WIDTH = 0.0036#0.036  # Full-frame sensor width
 SENSOR_HEIGHT = 0.0024#0.024  # Full-frame sensor height
@@ -57,60 +59,6 @@ def interpolate_path(path, num_points=10):
     return interpolated_path
 
 
-def compute_camera_basis(position, focal_point, up_vector):
-    z_c = (position - focal_point) / np.linalg.norm(position - focal_point)
-    x_c = np.cross(up_vector, z_c) / np.linalg.norm(np.cross(up_vector, z_c))
-    y_c = up_vector #np.cross(z_c, x_c)
-    return x_c, y_c, z_c
-
-# def world_to_camera(world_point, camera_position, camera_basis):
-#     x_c, y_c, z_c = camera_basis
-#     R = np.vstack([x_c, y_c, z_c]).T  # Rotation matrix
-#     return R @ (world_point - camera_position)
-#     
-def world_to_camera(world_point, camera_position, camera_basis):
-    # Convert the world point to homogeneous coordinates
-    world_point_homogeneous = np.append(world_point, 1)  # Add 1 for homogeneous coordinate
-    
-    x_c, y_c, z_c = camera_basis
-    
-    # Create the rotation matrix (3x3) from the camera basis
-    R = np.column_stack((x_c, y_c, z_c))  # Rotation matrix (3x3)
-    
-    # Create the translation vector (3x1)
-    T = camera_position  
-    
-    # Create the full transformation matrix (4x4)
-    transformation_matrix = np.eye(4)  # Initialize as an identity matrix
-    transformation_matrix[:3, :3] = R  # Set the rotation part
-    transformation_matrix[:3, 3] = T  # Set the translation part
-
-    # Multiply the homogeneous world point by the transformation matrix
-    camera_point_homogeneous = np.linalg.inv(transformation_matrix) @ world_point_homogeneous
-    
-    return list(camera_point_homogeneous[:3]/camera_point_homogeneous[3])  # Return only the 3D part
-
-# 4. Convert from camera coordinates to image plane coordinates
-def camera_to_image_plane(camera_point, focal_length):
-    x, y, z = camera_point
-    image_x = -(focal_length * x) / z
-    image_y = -(focal_length * y) / z
-    return image_x, image_y
-
-# 5. Convert from image plane coordinates to pixel coordinates
-def image_to_pixel(image_point, resolution, sensor_width, sensor_height):
-    image_x, image_y = image_point
-    width_px, height_px = resolution
-    pixel_x = (image_x + sensor_width / 2) * (width_px / sensor_width)
-    pixel_y = (sensor_height / 2 - image_y) * (height_px / sensor_height)
-    return int(pixel_x), int(pixel_y)
-
-def undo_pinhole_camera_inversion(image):
-    flipped_vertical = image.transpose(Image.FLIP_TOP_BOTTOM)
-    corrected_image = flipped_vertical.transpose(Image.FLIP_LEFT_RIGHT)
-    return corrected_image
-
-
 
 if __name__ == "__main__":
 
@@ -135,54 +83,36 @@ if __name__ == "__main__":
     for path in paths:
         interpolated_paths.append(interpolate_path(path, num_points=10000))
 
-
-    line_color = 'blue'
-    fuzzy_color = 'black'
-    electric_blue = (0, 102, 204)#'#00FFFF'  # Bright electric blue
-
     camera_position = np.array(position)
     focal_point = np.array(focal_point)
     up_vector = np.array(up_vector)
 
-    # Compute the camera basis vectors
-    focal_length = np.linalg.norm(focal_point - camera_position)
+    camera = PinholeCamera(position, focal_point, up_vector, SENSOR_WIDTH, SENSOR_HEIGHT, HORIZONTAL_RESOLUTION)
 
-    # Image size
-    aspect_ratio = SENSOR_WIDTH/SENSOR_HEIGHT
-    image_size = (HORIZONTAL_RESOLUTION, int(HORIZONTAL_RESOLUTION/aspect_ratio)) 
-    width, height = image_size
+    width, height = camera.resolution
     background = Image.new("RGBA", (width, height), (0, 0, 139, 255))
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))  # Fully transparent overlay
     draw = ImageDraw.Draw(overlay)
 
-    pixel_coords = []
-
-    camera_basis = compute_camera_basis(camera_position, focal_point, up_vector)
-
-    camera_points = []
     rasterised_points = []
     for path in interpolated_paths:
         for point in path:
-
-            camera_point = world_to_camera(point, camera_position, camera_basis)
-            camera_points.append(camera_point)
-            if camera_point[2] <= 0:
-                image_point = camera_to_image_plane(camera_point, focal_length)
-                pixel_coords = image_to_pixel(image_point, image_size, SENSOR_WIDTH, SENSOR_HEIGHT)
-                rasterised_points.append(pixel_coords)
+            rasterised_point =camera.photograph_point(point)
+            if rasterised_point is not None:
+                rasterised_points.append(rasterised_point)
 
 
-    if DEBUG:
-        camera_points = np.array(camera_points)
-        ax.scatter(camera_points[:, 0], camera_points[:, 1], camera_points[:, 2], color='b')    
-        # X axis (red)
-        ax.quiver(0, 0, 0, 0.01, 0, 0, color='r', arrow_length_ratio=0.1)
-        # Y-axis (Green)
-        ax.quiver(0, 0, 0, 0, 0.01, 0, color='g', arrow_length_ratio=0.1)
-        # Z-axis (Blue)
-        ax.quiver(0, 0, 0, 0, 0, 0.01, color='b', arrow_length_ratio=0.1)
-        plt.savefig('points_in_camera_frame')
-        plt.show()
+    # if DEBUG:
+    #     camera_points = np.array(camera_points)
+    #     ax.scatter(camera_points[:, 0], camera_points[:, 1], camera_points[:, 2], color='b')    
+    #     # X axis (red)
+    #     ax.quiver(0, 0, 0, 0.01, 0, 0, color='r', arrow_length_ratio=0.1)
+    #     # Y-axis (Green)
+    #     ax.quiver(0, 0, 0, 0, 0.01, 0, color='g', arrow_length_ratio=0.1)
+    #     # Z-axis (Blue)
+    #     ax.quiver(0, 0, 0, 0, 0, 0.01, color='b', arrow_length_ratio=0.1)
+    #     plt.savefig('points_in_camera_frame')
+    #     plt.show()
 
     
     crisp_radius = 2

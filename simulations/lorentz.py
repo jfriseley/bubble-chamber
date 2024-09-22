@@ -9,7 +9,7 @@ import random
 
 NUM_PARTICLES = 8
 OUTPUT_DIR = "data"
-SCALE=0.01
+SCALE=0.1
 
 @dataclass
 class Particle:
