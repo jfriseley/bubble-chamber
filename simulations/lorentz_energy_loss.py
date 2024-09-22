@@ -21,7 +21,6 @@ class Particle:
     charge: float  # Charge of the particle (positive/negative/neutral)
     mass: float  # Mass of the particle
 
-
     def __post_init__(self):
         self.path = [self.position.copy()]
 
@@ -59,39 +58,40 @@ class Particle:
             self.path.append(self.position.copy())
 
 
-
 @dataclass(kw_only=True)
 class Electron(Particle):
-    position: np.ndarray 
-    velocity: np.ndarray  
+    position: np.ndarray
+    velocity: np.ndarray
     energy: float
-    charge: float=-1.6e-19
-    mass: float=9.11e-31
+    charge: float = -1.6e-19
+    mass: float = 9.11e-31
+
 
 @dataclass(kw_only=True)
 class Proton(Particle):
-    position: np.ndarray 
-    velocity: np.ndarray  
+    position: np.ndarray
+    velocity: np.ndarray
     energy: float
-    charge: float=1.6e-19
-    mass: float=1.67e-27
+    charge: float = 1.6e-19
+    mass: float = 1.67e-27
+
 
 @dataclass(kw_only=True)
 class HeliumNucleus(Particle):
-    position: np.ndarray 
-    velocity: np.ndarray  
+    position: np.ndarray
+    velocity: np.ndarray
     energy: float
-    charge: float=3.2e-19
-    mass: float=6.644e-27
+    charge: float = 3.2e-19
+    mass: float = 6.644e-27
+
 
 @dataclass(kw_only=True)
 class Positron(Particle):
-    position: np.ndarray 
-    velocity: np.ndarray  
+    position: np.ndarray
+    velocity: np.ndarray
     energy: float
-    charge: float=1.6e-19
-    mass: float=9.11e-31
-
+    charge: float = 1.6e-19
+    mass: float = 9.11e-31
 
 
 def generate_random_position(scale):
