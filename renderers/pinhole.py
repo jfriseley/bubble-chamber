@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-DEBUG = True
+DEBUG = False
 SENSOR_WIDTH = 0.0036#0.036  # Full-frame sensor width
 SENSOR_HEIGHT = 0.0024#0.024  # Full-frame sensor height
 HORIZONTAL_RESOLUTION = 3600
@@ -151,8 +151,9 @@ if __name__ == "__main__":
     aspect_ratio = SENSOR_WIDTH/SENSOR_HEIGHT
     image_size = (HORIZONTAL_RESOLUTION, int(HORIZONTAL_RESOLUTION/aspect_ratio)) 
     width, height = image_size
-    image = Image.new("RGB", (width, height), "white")
-    draw = ImageDraw.Draw(image)
+    background = Image.new("RGBA", (width, height), (0, 0, 139, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))  # Fully transparent overlay
+    draw = ImageDraw.Draw(overlay)
 
     pixel_coords = []
 
@@ -183,20 +184,21 @@ if __name__ == "__main__":
         plt.savefig('points_in_camera_frame')
         plt.show()
 
-    fuzzy_radius = 5
-    crisp_radius = 1
+    
+    crisp_radius = 2
     for point in rasterised_points:
+        clear = (point[0], point[1])
+
+        # Draw multiple circles for fuzziness
+        draw.ellipse([clear[0]-crisp_radius, clear[1]-crisp_radius, clear[0]+crisp_radius, clear[1]+crisp_radius], fill=(230, 255, 255, 128))
+        
+    for point in rasterised_points:
+        fuzzy_radius = int(np.random.uniform(1,5))
         fuzzy_point = (point[0], point[1])
         for r in range(fuzzy_radius):
             # Draw multiple circles for fuzziness
-            draw.ellipse([fuzzy_point[0]-r, fuzzy_point[1]-r, fuzzy_point[0]+r, fuzzy_point[1]+r], fill=(0, 0, 0, int(255 * (1 - r / fuzzy_radius))), outline=(0, 0, 0))
+            draw.ellipse([fuzzy_point[0]-r, fuzzy_point[1]-r, fuzzy_point[0]+r, fuzzy_point[1]+r], fill=(0, 255, 255, int(255 * (1 - r / fuzzy_radius))))
         
-    for point in rasterised_points:
-        crisp_point = (point[0], point[1])
-        draw.ellipse(
-                [crisp_point[0] - crisp_radius, crisp_point[1] - crisp_radius, crisp_point[0] + crisp_radius, crisp_point[1] + crisp_radius],
-                fill=electric_blue
-            )
     # Ensure the output directory exists
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -208,4 +210,5 @@ if __name__ == "__main__":
     filepath = os.path.join(OUTPUT_DIR, filename)
 
     # Convert particle paths into a dictionary-like format
-    image.save(filepath)
+    blended = Image.alpha_composite(background, overlay)
+    blended.save(filepath)

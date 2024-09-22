@@ -90,7 +90,7 @@ if __name__ == "__main__":
     # generate electrons
     for _ in range(NUM_PARTICLES):
 
-        energy_range = (100, 3000) #eV
+        energy_range = (10, 3000) #eV
         position = generate_random_position(SCALE)
 
         particle = Particle(
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     #generate protons
     for _ in range(NUM_PARTICLES):
-        energy_range = (100, 30000) #eV
+        energy_range = (10, 30000) #eV
         position = generate_random_position(SCALE)
         particle = Particle(
             position=position, velocity=velocity, charge=1.6e-19, mass=1.67e-27, energy=EV_TO_J*np.random.uniform(*energy_range)
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     #generate positrons
     for _ in range(NUM_PARTICLES):
 
-        energy_range = (100, 3000) #eV
+        energy_range = (10, 3000) #eV
         position = generate_random_position(SCALE)
         particle = Particle(
             position=position, velocity=generate_random_velocity(1), charge=1.6e-19, mass=9.11e-31, energy=EV_TO_J*np.random.uniform(*energy_range)
