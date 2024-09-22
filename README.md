@@ -2,6 +2,12 @@
 
 A bubble chamber simulation
 
+Install your dependencies:
+
+```
+pip install -r dependencies.txt
+```
+
 Setup your Python path:
 
 ```
