@@ -1,16 +1,17 @@
 import argparse
 import numpy as np
 import pyvista as pv
-import sys
+import os
 from datetime import datetime
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-DEBUG = False
-SENSOR_WIDTH = 0.036  # Full-frame sensor width
-SENSOR_HEIGHT = 0.024  # Full-frame sensor height
-HORIZONTAL_RESOLUTION = 2500
+DEBUG = True
+SENSOR_WIDTH = 0.0036#0.036  # Full-frame sensor width
+SENSOR_HEIGHT = 0.0024#0.024  # Full-frame sensor height
+HORIZONTAL_RESOLUTION = 3600
+OUTPUT_DIR='out'
 
 def load_npz_file(file_path):
     """Loads an npz file and returns a list of lists of points."""
@@ -137,7 +138,7 @@ if __name__ == "__main__":
 
     line_color = 'blue'
     fuzzy_color = 'black'
-    electric_blue = '#00FFFF'  # Bright electric blue
+    electric_blue = (0, 102, 204)#'#00FFFF'  # Bright electric blue
 
     camera_position = np.array(position)
     focal_point = np.array(focal_point)
@@ -168,8 +169,7 @@ if __name__ == "__main__":
                 image_point = camera_to_image_plane(camera_point, focal_length)
                 pixel_coords = image_to_pixel(image_point, image_size, SENSOR_WIDTH, SENSOR_HEIGHT)
                 rasterised_points.append(pixel_coords)
-            else:
-                print(f"Skipping point behind camera")
+
 
     if DEBUG:
         camera_points = np.array(camera_points)
@@ -183,9 +183,29 @@ if __name__ == "__main__":
         plt.savefig('points_in_camera_frame')
         plt.show()
 
-
+    fuzzy_radius = 5
+    crisp_radius = 1
     for point in rasterised_points:
-        draw.ellipse([point[0] - 1, point[1] - 1, point[0] + 1, point[1] + 1], fill='blue')
+        fuzzy_point = (point[0], point[1])
+        for r in range(fuzzy_radius):
+            # Draw multiple circles for fuzziness
+            draw.ellipse([fuzzy_point[0]-r, fuzzy_point[1]-r, fuzzy_point[0]+r, fuzzy_point[1]+r], fill=(0, 0, 0, int(255 * (1 - r / fuzzy_radius))), outline=(0, 0, 0))
+        
+    for point in rasterised_points:
+        crisp_point = (point[0], point[1])
+        draw.ellipse(
+                [crisp_point[0] - crisp_radius, crisp_point[1] - crisp_radius, crisp_point[0] + crisp_radius, crisp_point[1] + crisp_radius],
+                fill=electric_blue
+            )
+    # Ensure the output directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    #image = undo_pinhole_camera_inversion(image)
-    image.save('interpolated_paths.png')
+    # Get the current timestamp and format it
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Create a unique filename with the timestamp
+    filename = f"pinhole_{timestamp}.png"
+    filepath = os.path.join(OUTPUT_DIR, filename)
+
+    # Convert particle paths into a dictionary-like format
+    image.save(filepath)
