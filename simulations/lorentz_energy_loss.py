@@ -17,9 +17,10 @@ EV_TO_J = 1.602e-19
 class Particle:
     position: np.ndarray  # 3D position of the particle
     velocity: np.ndarray  # 3D velocity of the particle, vector only not magnitude
+    energy: float
     charge: float  # Charge of the particle (positive/negative/neutral)
     mass: float  # Mass of the particle
-    energy: float
+
 
     def __post_init__(self):
         self.path = [self.position.copy()]
@@ -42,7 +43,6 @@ class Particle:
         return coefficient
 
     def update(self, magnetic_field, time_step):
-
         if particle.energy > 0:
             energy_loss = (
                 self.energy_loss_coefficient(1570) * time_step
@@ -57,6 +57,41 @@ class Particle:
             self.velocity += acceleration * time_step
             self.position += self.velocity * time_step
             self.path.append(self.position.copy())
+
+
+
+@dataclass(kw_only=True)
+class Electron(Particle):
+    position: np.ndarray 
+    velocity: np.ndarray  
+    energy: float
+    charge: float=-1.6e-19
+    mass: float=9.11e-31
+
+@dataclass(kw_only=True)
+class Proton(Particle):
+    position: np.ndarray 
+    velocity: np.ndarray  
+    energy: float
+    charge: float=1.6e-19
+    mass: float=1.67e-27
+
+@dataclass(kw_only=True)
+class HeliumNucleus(Particle):
+    position: np.ndarray 
+    velocity: np.ndarray  
+    energy: float
+    charge: float=3.2e-19
+    mass: float=6.644e-27
+
+@dataclass(kw_only=True)
+class Positron(Particle):
+    position: np.ndarray 
+    velocity: np.ndarray  
+    energy: float
+    charge: float=1.6e-19
+    mass: float=9.11e-31
+
 
 
 def generate_random_position(scale):
@@ -93,62 +128,18 @@ if __name__ == "__main__":
     particles = []
     velocity = np.array([-0.1, 0.11, 1])
     velocity = velocity / np.linalg.norm(velocity)
-    # generate electrons
-    for _ in range(NUM_PARTICLES):
 
-        energy_range = (10, 3000)  # eV
-        position = generate_random_position(SCALE)
-
-        particle = Particle(
-            position=position,
-            velocity=generate_random_velocity(1),
-            charge=-1.6e-19,
-            mass=9.11e-31,
-            energy=EV_TO_J * np.random.uniform(*energy_range),
-        )
-        particles.append(particle)
-
-    # generate protons
-    for _ in range(NUM_PARTICLES):
-        energy_range = (10, 30000)  # eV
-        position = generate_random_position(SCALE)
-        particle = Particle(
-            position=position,
-            velocity=velocity,
-            charge=1.6e-19,
-            mass=1.67e-27,
-            energy=EV_TO_J * np.random.uniform(*energy_range),
-        )
-        particles.append(particle)
-
-    # generate helium nuclei
-    for _ in range(NUM_PARTICLES):
-
-        energy_range = (100, 30000)  # eV
-        position = generate_random_position(SCALE)
-
-        particle = Particle(
-            position=position,
-            velocity=generate_random_velocity(1),
-            charge=3.2e-19,
-            mass=6.644e-27,
-            energy=EV_TO_J * np.random.uniform(*energy_range),
-        )
-        particles.append(particle)
-
-    # generate positrons
-    for _ in range(NUM_PARTICLES):
-
-        energy_range = (10, 3000)  # eV
-        position = generate_random_position(SCALE)
-        particle = Particle(
-            position=position,
-            velocity=generate_random_velocity(1),
-            charge=1.6e-19,
-            mass=9.11e-31,
-            energy=EV_TO_J * np.random.uniform(*energy_range),
-        )
-        particles.append(particle)
+    particle_types = [Electron, Proton, HeliumNucleus, Positron]
+    for particle_type in particle_types:
+        for _ in range(NUM_PARTICLES):
+            energy_range = (10, 3000) if particle_type == Electron else (10, 30000)
+            position = generate_random_position(SCALE)
+            particle = particle_type(
+                position=position,
+                velocity=velocity,
+                energy=EV_TO_J * np.random.uniform(*energy_range),
+            )
+            particles.append(particle)
 
     magnetic_field = np.array([0.0, 0.0, 1])
     time_step = 1e-12
