@@ -5,11 +5,11 @@ from typing import Tuple
 import pyvista as pv
 import os
 from datetime import datetime
+import random
 
-
-NUM_PARTICLES = 5
+NUM_PARTICLES = 8
 OUTPUT_DIR = "data"
-
+SCALE=0.01
 
 @dataclass
 class Particle:
@@ -32,11 +32,13 @@ class Particle:
         self.position += self.velocity * time_step
         self.path.append(self.position.copy())
 
+def generate_random_position(scale):
+    return np.random.uniform(-scale / 2, scale / 2, 3)
 
 def generate_random_velocity(magnitude: float) -> np.ndarray:
     # Generate random spherical coordinates
     theta = np.random.uniform(0, 2 * np.pi)  # Azimuthal angle
-    phi = np.random.uniform(0, 2 * np.pi)  # Polar angle
+    phi = np.arccos(np.random.uniform(-1, 1))  # Polar angle, using arccos to get uniform distribution
 
     # Convert spherical coordinates to Cartesian coordinates
     x = np.sin(phi) * np.cos(theta)
@@ -58,18 +60,45 @@ def save_particle_paths(filepath, paths):
 
 if __name__ == "__main__":
 
-    time_step = 0.1
 
     particles = []
+    velocity = np.array([-0.1, 0.11, 1])
+    velocity = velocity / np.linalg.norm(velocity)
+    velocity *= 1e8
+    # generate electrons
     for _ in range(NUM_PARTICLES):
-        position = np.zeros(3)
-
-        velocity = generate_random_velocity(1e8)
+        position = generate_random_position(SCALE)
 
         particle = Particle(
-            position=position, velocity=velocity, charge=-1.6e-19, mass=9.11e-31
+            position=position, velocity=generate_random_velocity(random.uniform(1e7, 1e8)), charge=-1.6e-19, mass=9.11e-31
         )
         particles.append(particle)
+
+    #generate protons
+    for _ in range(NUM_PARTICLES):
+        position = generate_random_position(SCALE)
+        particle = Particle(
+            position=position, velocity=velocity, charge=1.6e-19, mass=1.67e-27
+        )
+        particles.append(particle)
+
+    # # generate helium nuclei
+    # for _ in range(NUM_PARTICLES):
+    #     position = generate_random_position(SCALE)
+
+    #     particle = Particle(
+    #         position=position, velocity=generate_random_velocity(random.uniform(1e7, 1e8)), charge=3.2e-19, mass=6.644e-27
+    #     )
+    #     particles.append(particle)
+
+    #generate positrons
+    for _ in range(NUM_PARTICLES):
+        position = generate_random_position(SCALE)
+        particle = Particle(
+            position=position, velocity=generate_random_velocity(random.uniform(1e7, 1e8)), charge=1.6e-19, mass=9.11e-31
+        )
+        particles.append(particle)
+
 
     magnetic_field = np.array([0.0, 0.0, 1.0])
     time_step = 1e-12
