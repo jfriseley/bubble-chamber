@@ -16,7 +16,6 @@ OUTPUT_DIR='out'
 
 
 def interpolate_path(path, num_points=10):
-    # Interpolate the path to create smooth transitions
     t = np.linspace(0, 1, len(path))
     interpolated_t = np.linspace(0, 1, num_points)
     try:
@@ -84,16 +83,10 @@ if __name__ == "__main__":
             # Draw multiple circles for fuzziness
             draw.ellipse([fuzzy_point[0]-r, fuzzy_point[1]-r, fuzzy_point[0]+r, fuzzy_point[1]+r], fill=(0, 255, 255, int(255 * (1 - r / fuzzy_radius))))
         
-    # Ensure the output directory exists
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # Get the current timestamp and format it
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Create a unique filename with the timestamp
-    filename = f"pinhole_{timestamp}.png"
+    filename = f"blueprint_{timestamp}.png"
     filepath = os.path.join(OUTPUT_DIR, filename)
-
-    # Convert particle paths into a dictionary-like format
     blended = Image.alpha_composite(background, overlay)
     blended.save(filepath)
+    print(f"Saved to {filepath}")
